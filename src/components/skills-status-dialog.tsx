@@ -1,0 +1,72 @@
+/** @jsxImportSource @opentui/solid */
+
+import { For, Show, createMemo } from "solid-js"
+import type { Accessor } from "solid-js"
+import type { TuiThemeCurrent } from "@opencode-ai/plugin/tui"
+import type { SkillSummary } from "../skill-data"
+
+export interface SkillsStatusDialogProps {
+  skills: Accessor<SkillSummary[]>
+  loadedNames: Accessor<Set<string>>
+  theme: Accessor<TuiThemeCurrent>
+  version: Accessor<number>
+}
+
+export function SkillsStatusDialog(props: SkillsStatusDialogProps) {
+  const currentLoadedNames = createMemo(() => {
+    props.version()
+    return props.loadedNames()
+  })
+
+  const orderedSkills = createMemo(() => {
+    const loaded = currentLoadedNames()
+
+    return [...props.skills()].sort((left, right) => {
+      const leftLoaded = loaded.has(left.name)
+      const rightLoaded = loaded.has(right.name)
+
+      if (leftLoaded !== rightLoaded) {
+        return leftLoaded ? -1 : 1
+      }
+
+      return left.name.localeCompare(right.name)
+    })
+  })
+
+  const textColor = createMemo(() => props.theme().text)
+  const mutedColor = createMemo(() => props.theme().textMuted)
+  const loadedColor = createMemo(() => props.theme().success)
+  const unloadedColor = createMemo(() => props.theme().textMuted)
+
+  return (
+    <box flexDirection="column" rowGap={1} paddingX={2} paddingY={1} paddingTop={0}>
+      <box flexDirection="row" justifyContent="space-between" columnGap={2}>
+        <text style={{ fg: textColor() }}>
+          <strong>Skills Status</strong>
+        </text>
+        <text style={{ fg: mutedColor() }}>esc</text>
+      </box>
+
+      <Show
+        when={orderedSkills().length > 0}
+        fallback={<text style={{ fg: mutedColor() }}>No skills available</text>}
+      >
+        <box flexDirection="column">
+          <For each={orderedSkills()}>
+            {(skill) => {
+              const loaded = () => currentLoadedNames().has(skill.name)
+
+              return (
+                <box flexDirection="row" columnGap={1}>
+                  <text style={{ fg: loaded() ? loadedColor() : unloadedColor() }}>{"•"}</text>
+                  <text style={{ fg: textColor() }}>{skill.name}</text>
+                  <text style={{ fg: mutedColor() }}>{loaded() ? "Loaded" : "Unloaded"}</text>
+                </box>
+              )
+            }}
+          </For>
+        </box>
+      </Show>
+    </box>
+  )
+}
