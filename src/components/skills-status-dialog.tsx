@@ -8,6 +8,7 @@ import type { SkillSummary } from "../skill-data"
 export interface SkillsStatusDialogProps {
   skills: Accessor<SkillSummary[]>
   loadedNames: Accessor<Set<string>>
+  hiddenNames: Accessor<Set<string>>
   theme: Accessor<TuiThemeCurrent>
   version: Accessor<number>
 }
@@ -18,10 +19,15 @@ export function SkillsStatusDialog(props: SkillsStatusDialogProps) {
     return props.loadedNames()
   })
 
+  const visibleSkills = createMemo(() => {
+    const hidden = props.hiddenNames()
+    return props.skills().filter((skill) => !hidden.has(skill.name))
+  })
+
   const orderedSkills = createMemo(() => {
     const loaded = currentLoadedNames()
 
-    return [...props.skills()].sort((left, right) => {
+    return [...visibleSkills()].sort((left, right) => {
       const leftLoaded = loaded.has(left.name)
       const rightLoaded = loaded.has(right.name)
 
@@ -32,6 +38,8 @@ export function SkillsStatusDialog(props: SkillsStatusDialogProps) {
       return left.name.localeCompare(right.name)
     })
   })
+
+  const hiddenCount = createMemo(() => props.hiddenNames().size)
 
   const textColor = createMemo(() => props.theme().text)
   const mutedColor = createMemo(() => props.theme().textMuted)
@@ -66,6 +74,10 @@ export function SkillsStatusDialog(props: SkillsStatusDialogProps) {
             }}
           </For>
         </box>
+      </Show>
+
+      <Show when={hiddenCount() > 0}>
+        <text style={{ fg: mutedColor() }}>{`(${hiddenCount()} hidden — use /skills-filter to manage)`}</text>
       </Show>
     </box>
   )

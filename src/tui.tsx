@@ -1,13 +1,17 @@
 /** @jsxImportSource @opentui/solid */
 
-import type { TuiPlugin, TuiPluginModule } from "@opencode-ai/plugin/tui"
+import type { TuiDialogStack, TuiPlugin, TuiPluginModule } from "@opencode-ai/plugin/tui"
 import { createSignal } from "solid-js"
 import { SkillsPanel } from "./components/skills-panel"
 import { SkillsStatusDialog } from "./components/skills-status-dialog"
+import { SkillsFilterDialog } from "./components/skills-filter-dialog"
 import {
   collectLoadedSkillsForSession,
   extractLoadedSkillName,
   loadAvailableSkills,
+  loadHiddenSkills,
+  saveHiddenSkills,
+  toggleHiddenSkill,
   type SkillSummary,
 } from "./skill-data"
 
@@ -18,10 +22,44 @@ const tui: TuiPlugin = async (api) => {
   const [skills, setSkills] = createSignal<SkillSummary[]>([])
   const [loadVersion, setLoadVersion] = createSignal(0)
   const [collapsed, setCollapsed] = createSignal(Boolean(api.kv.get(COLLAPSED_KEY, false)))
+  const hiddenSkills = loadHiddenSkills(api)
+  const [hiddenVersion, setHiddenVersion] = createSignal(0)
+  const hiddenAccessor = () => {
+    hiddenVersion()
+    return hiddenSkills
+  }
   const loadedBySession = new Map<string, Set<string>>()
   let refreshTimer: ReturnType<typeof setTimeout> | undefined
   const loadedRefreshTimers = new Set<ReturnType<typeof setTimeout>>()
   let visibleSessionID: string | undefined
+  let activeFilterDialog: TuiDialogStack | undefined
+  let filterDialogGeneration = 0
+
+  const renderFilterDialog = () => (
+    <SkillsFilterDialog
+      api={api}
+      skills={skills}
+      hiddenNames={hiddenAccessor}
+      onToggleHidden={toggleHidden}
+      onClearHidden={clearHidden}
+    />
+  )
+
+  const openFilterDialog = (dialog: TuiDialogStack) => {
+    activeFilterDialog = dialog
+    const myGen = ++filterDialogGeneration
+    dialog.setSize("medium")
+    dialog.replace(renderFilterDialog, () => {
+      if (myGen === filterDialogGeneration) {
+        activeFilterDialog = undefined
+      }
+    })
+  }
+
+  const refreshFilterDialog = () => {
+    if (!activeFilterDialog) return
+    openFilterDialog(activeFilterDialog)
+  }
 
   const getActiveSessionID = () => {
     const currentRoute = api.route.current
@@ -38,6 +76,34 @@ const tui: TuiPlugin = async (api) => {
     const next = !collapsed()
     setCollapsed(next)
     api.kv.set(COLLAPSED_KEY, next)
+  }
+
+  const toggleHidden = (name: string) => {
+    toggleHiddenSkill(hiddenSkills, name)
+    saveHiddenSkills(api, hiddenSkills)
+    setHiddenVersion((value) => value + 1)
+    refreshFilterDialog()
+    api.ui.toast({
+      variant: "info",
+      title: "Skills Sidebar",
+      message: hiddenSkills.has(name) ? `Hid "${name}"` : `Restored "${name}"`,
+      duration: 2000,
+    })
+  }
+
+  const clearHidden = () => {
+    if (hiddenSkills.size === 0) return
+    const count = hiddenSkills.size
+    hiddenSkills.clear()
+    saveHiddenSkills(api, hiddenSkills)
+    setHiddenVersion((value) => value + 1)
+    refreshFilterDialog()
+    api.ui.toast({
+      variant: "info",
+      title: "Skills Sidebar",
+      message: `Restored ${count} hidden skill${count === 1 ? "" : "s"}`,
+      duration: 2000,
+    })
   }
 
   const getLoadedSkills = (sessionID: string) => {
@@ -186,10 +252,31 @@ const tui: TuiPlugin = async (api) => {
           <SkillsStatusDialog
             skills={skills}
             loadedNames={() => getLoadedSkills(sessionID)}
+            hiddenNames={hiddenAccessor}
             theme={() => api.theme.current}
             version={loadVersion}
           />
         ))
+      },
+    },
+    {
+      title: "Skills Filter",
+      value: "skills-filter",
+      description: "Hide or restore skills in the sidebar",
+      category: "Skills",
+      slash: { name: "skills-filter" },
+      onSelect: (dialog) => {
+        if (!dialog) {
+          api.ui.toast({
+            variant: "warning",
+            title: "Skills Sidebar",
+            message: "Unable to open the skills filter dialog.",
+            duration: 4000,
+          })
+          return
+        }
+
+        openFilterDialog(dialog)
       },
     },
   ])
@@ -231,9 +318,11 @@ const tui: TuiPlugin = async (api) => {
           <SkillsPanel
             skills={skills}
             loadedNames={() => getLoadedSkills(props.session_id)}
+            hiddenNames={hiddenAccessor}
             theme={() => api.theme.current}
             collapsed={collapsed}
             onToggle={toggleCollapsed}
+            onClearHidden={clearHidden}
           />
         )
       },

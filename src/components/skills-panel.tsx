@@ -23,18 +23,24 @@ function truncateLabel(value: string, maxWidth: number) {
 export interface SkillsPanelProps {
   skills: Accessor<SkillSummary[]>
   loadedNames: Accessor<Set<string>>
+  hiddenNames: Accessor<Set<string>>
   theme: Accessor<TuiThemeCurrent>
   collapsed: Accessor<boolean>
   onToggle: () => void
+  onClearHidden: () => void
 }
 
 export function SkillsPanel(props: SkillsPanelProps) {
   const [panelWidth, setPanelWidth] = createSignal(0)
   let panelBox: { width: number } | undefined
+  const visibleSkills = createMemo(() => {
+    const hidden = props.hiddenNames()
+    return props.skills().filter((skill) => !hidden.has(skill.name))
+  })
   const orderedSkills = createMemo(() => {
     const loaded = props.loadedNames()
 
-    return [...props.skills()].sort((left, right) => {
+    return [...visibleSkills()].sort((left, right) => {
       const leftLoaded = loaded.has(left.name)
       const rightLoaded = loaded.has(right.name)
 
@@ -45,6 +51,10 @@ export function SkillsPanel(props: SkillsPanelProps) {
       return left.name.localeCompare(right.name)
     })
   })
+  const hiddenList = createMemo(() => {
+    const hidden = props.hiddenNames()
+    return [...hidden].sort((a, b) => a.localeCompare(b))
+  })
 
   const textColor = createMemo(() => props.theme().text)
   const mutedColor = createMemo(() => props.theme().textMuted)
@@ -52,9 +62,17 @@ export function SkillsPanel(props: SkillsPanelProps) {
   const unloadedColor = createMemo(() => props.theme().textMuted)
   const loadedCount = createMemo(() => {
     const loaded = props.loadedNames()
-    return props.skills().filter((skill) => loaded.has(skill.name)).length
+    return visibleSkills().filter((skill) => loaded.has(skill.name)).length
   })
   const title = createMemo(() => (props.collapsed() ? "▶ Skills" : "▼ Skills"))
+  const headerSummary = createMemo(() => {
+    const loaded = loadedCount()
+    const hidden = props.hiddenNames().size
+    if (hidden === 0) {
+      return `(${loaded} loaded)`
+    }
+    return `(${loaded} loaded, ${hidden} hidden)`
+  })
 
   return (
     <box
@@ -70,7 +88,7 @@ export function SkillsPanel(props: SkillsPanelProps) {
           <strong>{title()}</strong>
         </text>
         <Show when={props.collapsed()}>
-          <text style={{ fg: mutedColor() }}>{`(${loadedCount()} loaded)`}</text>
+          <text style={{ fg: mutedColor() }}>{headerSummary()}</text>
         </Show>
       </box>
 
@@ -102,6 +120,14 @@ export function SkillsPanel(props: SkillsPanelProps) {
               )
             }}
           </For>
+        </Show>
+
+        <Show when={hiddenList().length > 0}>
+          <box flexDirection="row" columnGap={1} onMouseDown={props.onClearHidden}>
+            <text style={{ fg: mutedColor() }}>
+              {`Hidden: ${hiddenList().length} (show all)`}
+            </text>
+          </box>
         </Show>
       </Show>
     </box>
