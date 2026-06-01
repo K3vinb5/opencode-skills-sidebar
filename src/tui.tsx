@@ -260,17 +260,17 @@ const tui: TuiPlugin = async (api) => {
       },
     },
     {
-      title: "Skills Filter",
-      value: "skills-filter",
+      title: "Hide Skills",
+      value: "hide-skills",
       description: "Hide or restore skills in the sidebar",
       category: "Skills",
-      slash: { name: "skills-filter" },
+      slash: { name: "hide-skills" },
       onSelect: (dialog) => {
         if (!dialog) {
           api.ui.toast({
             variant: "warning",
             title: "Skills Sidebar",
-            message: "Unable to open the skills filter dialog.",
+            message: "Unable to open the hide skills dialog.",
             duration: 4000,
           })
           return
