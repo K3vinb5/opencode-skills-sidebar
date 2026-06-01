@@ -45,6 +45,23 @@ Restart `opencode` so the TUI plugin is reloaded.
 - Marks each skill as `Loaded` or `Unloaded`
 - Supports collapsing the section from the sidebar header
 - Persists collapsed state across restarts
+- Supports hiding individual skills from the sidebar (hidden set persists across restarts)
+
+## Filtering skills
+
+You can hide skills you do not want to see in the sidebar (for example, the
+`caveman` skill). Manage hidden skills with **`/skills-filter`**:
+
+- Opens a full-screen dialog. Each skill shows a `hidden` / `shown` footer;
+  select one to toggle.
+- A `Show all hidden` entry appears at the top of the list when any skill is
+  hidden.
+- When at least one skill is hidden, the expanded sidebar shows a
+  `Hidden: … (show all)` footer — click it to restore everything.
+
+When at least one skill is hidden, the collapsed sidebar header shows
+`(N loaded, M hidden)`. The hidden set is stored under
+`opencode-skills-sidebar.hidden` in the TUI plugin kv and survives restarts.
 
 ## How it works
 
