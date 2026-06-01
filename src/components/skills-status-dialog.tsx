@@ -77,7 +77,7 @@ export function SkillsStatusDialog(props: SkillsStatusDialogProps) {
       </Show>
 
       <Show when={hiddenCount() > 0}>
-        <text style={{ fg: mutedColor() }}>{`(${hiddenCount()} hidden — use /skills-filter to manage)`}</text>
+        <text style={{ fg: mutedColor() }}>{`(${hiddenCount()} hidden — use /hide-skills to manage)`}</text>
       </Show>
     </box>
   )

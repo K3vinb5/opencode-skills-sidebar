@@ -50,7 +50,7 @@ Restart `opencode` so the TUI plugin is reloaded.
 ## Filtering skills
 
 You can hide skills you do not want to see in the sidebar (for example, the
-`caveman` skill). Manage hidden skills with **`/skills-filter`**:
+`caveman` skill). Manage hidden skills with **`/hide-skills`**:
 
 - Opens a full-screen dialog. Each skill shows a `hidden` / `shown` footer;
   select one to toggle.

@@ -66,10 +66,9 @@ export function SkillsFilterDialog(props: SkillsFilterDialogProps) {
       }
     >
       <props.api.ui.DialogSelect
-        title="Skills Filter"
-        placeholder="Select a skill"
+        title="Hide Skills"
+        placeholder="Search skills…"
         options={options()}
-        skipFilter
         onSelect={(option) => {
           if (option.value === BULK_RESTORE) {
             props.onClearHidden()
